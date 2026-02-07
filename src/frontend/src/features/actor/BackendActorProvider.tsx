@@ -26,7 +26,7 @@ export function BackendActorProvider({ children }: { children: ReactNode }) {
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [initError, setInitError] = useState<string | null>(null);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, currentUserEmail } = useAuth();
   const queryClient = useQueryClient();
 
   const initializeActor = useCallback(async (retryPolicy: RetryPolicy) => {
@@ -36,9 +36,13 @@ export function BackendActorProvider({ children }: { children: ReactNode }) {
     setRetryCount(0);
     setIsRetrying(false);
 
-    // Cancel and reset stale profile query state to prevent error loops
-    queryClient.cancelQueries({ queryKey: ['currentUserProfile'] });
-    queryClient.resetQueries({ queryKey: ['currentUserProfile'] });
+    // Cancel and reset stale profile query state using predicate to match all variations
+    queryClient.cancelQueries({
+      predicate: (query) => query.queryKey[0] === 'currentUserProfile'
+    });
+    queryClient.resetQueries({
+      predicate: (query) => query.queryKey[0] === 'currentUserProfile'
+    });
 
     try {
       await retryPolicy.execute(
@@ -54,8 +58,10 @@ export function BackendActorProvider({ children }: { children: ReactNode }) {
           setIsReady(true);
           setIsRetrying(false);
 
-          // Only invalidate specific actor-dependent queries, not all queries
-          queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+          // Only invalidate specific actor-dependent queries after actor is ready
+          queryClient.invalidateQueries({
+            predicate: (query) => query.queryKey[0] === 'currentUserProfile'
+          });
           queryClient.invalidateQueries({ queryKey: ['myJobApplication'] });
           queryClient.invalidateQueries({ queryKey: ['applicantsByLocation'] });
         },
@@ -110,8 +116,8 @@ export function BackendActorProvider({ children }: { children: ReactNode }) {
 
 export function useBackendActor() {
   const context = useContext(BackendActorContext);
-  if (!context) {
-    throw new Error('useBackendActor must be used within BackendActorProvider');
+  if (context === undefined) {
+    throw new Error('useBackendActor must be used within a BackendActorProvider');
   }
   return context;
 }

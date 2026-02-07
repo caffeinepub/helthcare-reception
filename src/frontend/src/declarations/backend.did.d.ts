@@ -10,6 +10,17 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type AuthResult = { 'ok' : null } |
+  { 'err' : Error };
+export type Error = { 'roleNotSet' : null } |
+  { 'recruiterCannotApply' : null } |
+  { 'noApplicationFound' : null } |
+  { 'alreadyRegistered' : null } |
+  { 'jobSeekerCannotSearch' : null } |
+  { 'unauthorized' : null } |
+  { 'invalidCredentials' : null } |
+  { 'roleAlreadySet' : null } |
+  { 'profileNotFound' : null };
 export type ExternalBlob = Uint8Array;
 export type Gender = { 'other' : null } |
   { 'female' : null } |
@@ -23,12 +34,19 @@ export interface JobApplicantProfile {
   'photo' : [] | [ExternalBlob],
   'location' : Location,
 }
+export type JobApplicationResult = { 'ok' : JobApplicantProfile } |
+  { 'err' : Error };
+export type JobApplicationsResult = { 'ok' : Array<JobApplicantProfile> } |
+  { 'err' : Error };
 export interface Location {
   'country' : string,
   'city' : string,
   'district' : string,
   'state' : string,
 }
+export type Principal = Principal;
+export type RegisterResult = { 'ok' : Principal } |
+  { 'err' : Error };
 export interface UserProfile {
   'name' : string,
   'role' : [] | [UserRole],
@@ -43,6 +61,8 @@ export type UserRole = { 'jobSeeker' : null } |
 export type UserRole__1 = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export type VoidResult = { 'ok' : null } |
+  { 'err' : Error };
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -72,22 +92,22 @@ export interface _SERVICE {
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole__1], undefined>,
-  'authenticateUser' : ActorMethod<[string, string], boolean>,
+  'authenticateUser' : ActorMethod<[string, string], AuthResult>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole__1>,
-  'getMyJobApplication' : ActorMethod<[], [] | [JobApplicantProfile]>,
+  'getMyJobApplication' : ActorMethod<[], JobApplicationResult>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'registerUser' : ActorMethod<[UserProfile, string], Principal>,
+  'registerUser' : ActorMethod<[UserProfile, string], RegisterResult>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'searchApplicantsByLocation' : ActorMethod<
     [Location, boolean],
-    Array<JobApplicantProfile>
+    JobApplicationsResult
   >,
-  'setUserLocation' : ActorMethod<[Location], undefined>,
-  'setUserRole' : ActorMethod<[UserRole], undefined>,
-  'submitJobApplication' : ActorMethod<[Location, ExternalBlob], undefined>,
-  'updateJobApplication' : ActorMethod<[Location, ExternalBlob], undefined>,
+  'setUserLocation' : ActorMethod<[Location], VoidResult>,
+  'setUserRole' : ActorMethod<[UserRole], VoidResult>,
+  'submitJobApplication' : ActorMethod<[Location, ExternalBlob], VoidResult>,
+  'updateJobApplication' : ActorMethod<[Location, ExternalBlob], VoidResult>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

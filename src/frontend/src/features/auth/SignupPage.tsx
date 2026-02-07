@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { Gender, type UserProfile } from '@/backend';
 import AppLayout from '@/components/AppLayout';
+import { mapBackendError, isErrorResult } from '@/utils/backendErrors';
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -48,10 +49,18 @@ export default function SignupPage() {
         onboardingCompleted: false,
       };
 
-      await actor.registerUser(profile, password);
-      navigate({ to: '/login' });
+      const result = await actor.registerUser(profile, password);
+      
+      // Handle Result type properly
+      if (isErrorResult(result)) {
+        const errorInfo = mapBackendError(result.err);
+        setError(errorInfo.message);
+      } else {
+        // Success - navigate to login
+        navigate({ to: '/login' });
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to create account. Email may already be registered.');
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

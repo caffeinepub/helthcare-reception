@@ -1,48 +1,106 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useActor } from '@/hooks/useActor';
+import { useBackendActor } from '../actor/BackendActorProvider';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Briefcase, Users } from 'lucide-react';
-import { UserRole } from '@/backend';
+import { Loader2, Briefcase, Users, AlertCircle } from 'lucide-react';
+import { UserRole, Error_ } from '@/backend';
 import AppLayout from '@/components/AppLayout';
+import { mapBackendError, isErrorResult } from '@/utils/backendErrors';
+import AsyncFallbackState from '@/components/AsyncFallbackState';
 
 export default function RoleSelectionPage() {
   const navigate = useNavigate();
-  const { actor } = useActor();
+  const { actor, isReady, isInitializing, isRetrying, retry } = useBackendActor();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isAuthError, setIsAuthError] = useState(false);
 
   const handleRoleSelect = async (role: UserRole) => {
-    if (!actor) {
-      setError('System not ready. Please try again.');
+    if (!actor || !isReady) {
+      setError('System not ready. Please wait or retry.');
+      setIsAuthError(false);
       return;
     }
 
     setLoading(true);
     setError('');
+    setIsAuthError(false);
     try {
-      await actor.setUserRole(role);
-      navigate({ to: '/onboarding/location' });
+      const result = await actor.setUserRole(role);
+      
+      // Handle Result type properly
+      if (isErrorResult(result)) {
+        const errorInfo = mapBackendError(result.err);
+        setError(errorInfo.message);
+        // Check if this is an authorization/session error
+        if (result.err === Error_.unauthorized || result.err === Error_.profileNotFound) {
+          setIsAuthError(true);
+        }
+      } else {
+        // Success - navigate to location step
+        navigate({ to: '/onboarding/location' });
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to set role');
+      setError(err.message || 'Failed to set role. Please try again.');
+      setIsAuthError(false);
     } finally {
       setLoading(false);
     }
   };
+
+  // Show connecting state while actor is initializing
+  if (isInitializing || isRetrying) {
+    return (
+      <AsyncFallbackState
+        state="loading"
+        message="Connecting to the system..."
+      />
+    );
+  }
+
+  // Show error state if actor failed to initialize
+  if (!actor || !isReady) {
+    return (
+      <AsyncFallbackState
+        state="error"
+        title="Connection Failed"
+        message="Unable to connect to the system. Please retry or go back to login."
+        actions={{
+          retry: () => retry(),
+          goToLogin: true,
+        }}
+      />
+    );
+  }
 
   return (
     <AppLayout>
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-2xl space-y-8">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Choose Your Path</h1>
-            <p className="text-muted-foreground">Select how you'd like to use Helthcare Reception</p>
+            <h1 className="text-3xl font-bold">Choose Your Role</h1>
+            <p className="text-muted-foreground">
+              Select your role to get started with Helthcare Reception
+            </p>
           </div>
 
           {error && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="space-y-2">
+                <p>{error}</p>
+                {isAuthError && (
+                  <Button
+                    onClick={() => navigate({ to: '/login' })}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                  >
+                    Go to Login
+                  </Button>
+                )}
+              </AlertDescription>
             </Alert>
           )}
 

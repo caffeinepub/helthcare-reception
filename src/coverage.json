@@ -1,50 +1,42 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T09:36:31.317Z",
+  "generatedAt": "2026-02-07T13:12:57.354Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-20",
-        "summary": "Prevent the post-login onboarding guard from repeatedly showing the destructive error screen (\"Unable to load your account\") for transient profile-load failures by adding automatic retry/backoff for fetching the current user profile and only surfacing a destructive error after retries are exhausted.",
+        "id": "REQ-38",
+        "summary": "Audit the frontend for any user-facing text that says or implies that only admins can choose a role (e.g., \"only admins choose role\"), and replace it with accurate English messaging that indicates any logged-in user can choose their role during onboarding.",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/features/onboarding/RoleSelectionPage.tsx",
+          "frontend/src/utils/backendErrors.ts",
           "frontend/src/features/onboarding/RequireOnboarding.tsx"
         ],
         "matchedFiles": [
+          "frontend/src/features/onboarding/RoleSelectionPage.tsx",
+          "frontend/src/utils/backendErrors.ts",
           "frontend/src/features/onboarding/RequireOnboarding.tsx"
         ]
       },
       {
-        "id": "REQ-21",
-        "summary": "Update the onboarding status query behavior so that it is resilient and does not immediately fail on first attempt: configure React Query retries for the current user profile query and ensure error messages shown to users are generic, English, and do not instruct users to refresh the page.",
+        "id": "REQ-39",
+        "summary": "On the Role Selection page, ensure that if role selection fails due to an authorization/session issue, the error message shown to the user is clear English and does not reference admins; it must guide the user to log in again (e.g., provide a \"Go to Login\" action).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/features/onboarding/useOnboardingStatus.ts"
+          "frontend/src/features/onboarding/RoleSelectionPage.tsx",
+          "frontend/src/utils/backendErrors.ts",
+          "frontend/src/components/AsyncFallbackState.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/features/onboarding/useOnboardingStatus.ts"
-        ]
-      },
-      {
-        "id": "REQ-22",
-        "summary": "Ensure the backend actor initialization / access-control initialization state does not trigger repeated onboarding/profile errors: keep the onboarding/profile queries disabled until the backend actor is fully ready, and avoid any state transitions that would cause repeated error->retry loops during actor initialization.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/features/actor/BackendActorProvider.tsx",
-          "frontend/src/features/onboarding/useOnboardingStatus.ts",
-          "frontend/src/features/onboarding/RequireOnboarding.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/features/actor/BackendActorProvider.tsx",
-          "frontend/src/features/onboarding/useOnboardingStatus.ts",
-          "frontend/src/features/onboarding/RequireOnboarding.tsx"
+          "frontend/src/features/onboarding/RoleSelectionPage.tsx",
+          "frontend/src/utils/backendErrors.ts"
         ]
       }
     ]
@@ -54,9 +46,9 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/features/actor/BackendActorProvider.tsx",
     "frontend/src/features/onboarding/RequireOnboarding.tsx",
-    "frontend/src/features/onboarding/useOnboardingStatus.ts",
+    "frontend/src/features/onboarding/RoleSelectionPage.tsx",
+    "frontend/src/utils/backendErrors.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,18 +1,49 @@
 import { useApplicantsByLocation } from './useApplicantsByLocation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Mail, Phone, MapPin, User } from 'lucide-react';
+import { Mail, Phone, MapPin, User } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
+import AsyncFallbackState from '@/components/AsyncFallbackState';
 
 export default function RecruiterBrowsePage() {
-  const { applicants, isLoading, location } = useApplicantsByLocation();
+  const { applicants, isLoading, isError, error, location, refetch, hasLocation } = useApplicantsByLocation();
 
   if (isLoading) {
     return (
       <AppLayout showNav>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-        </div>
+        <AsyncFallbackState state="loading" message="Loading applicants..." />
+      </AppLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AppLayout showNav>
+        <AsyncFallbackState
+          state="error"
+          title="Unable to Load Applicants"
+          message={error?.message || 'An error occurred while loading applicants. Please try again.'}
+          actions={{
+            retry: () => refetch(),
+            goToLogin: !hasLocation,
+            goToOnboarding: !hasLocation,
+          }}
+        />
+      </AppLayout>
+    );
+  }
+
+  if (!hasLocation) {
+    return (
+      <AppLayout showNav>
+        <AsyncFallbackState
+          state="empty"
+          title="Location Not Set"
+          message="Please complete your profile setup to view applicants in your area."
+          actions={{
+            goToOnboarding: true,
+          }}
+        />
       </AppLayout>
     );
   }

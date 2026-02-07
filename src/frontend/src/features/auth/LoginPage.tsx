@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
+import { mapBackendError, isErrorResult } from '@/utils/backendErrors';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -28,7 +29,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Don't show destructive error if system is still initializing
     if (!actor || !isReady) {
       return;
     }
@@ -36,12 +36,18 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await actor.authenticateUser(email, password);
-      if (result) {
+      
+      // Handle Result type properly
+      if (isErrorResult(result)) {
+        const errorInfo = mapBackendError(result.err);
+        setError(errorInfo.message);
+      } else {
+        // Success - set authenticated state and navigate
         login(email);
         navigate({ to: '/onboarding/role' });
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

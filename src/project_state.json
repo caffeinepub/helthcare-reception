@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 13,
+  "projectStateVersion": 23,
   "summary": "Build a mobile app called \"Helthcare Reception\" with welcome screen, authentication (login + create account), first-time role selection (job seeker vs recruiter) with area details, job seeker application upload, and recruiter browsing of local applicants.",
   "architectural_notes": [
     "Persist user account and login session data.",
@@ -12,7 +12,11 @@
     "Performance issue: After logging in, the next page/screen takes a long time to open (slow post-login navigation/loading).",
     "After login, an error message appears: \"Unable to load your account\" (post-login profile/account load failing).",
     "Login page: input boxes/fields are not working (cannot interact/type/tap).",
-    "Login flow shows error: \"Failed to connect to the backend system. Please refresh the page to try again.\" (backend actor not ready / transient connection failure during initialization)."
+    "Login flow shows error: \"Failed to connect to the backend system. Please refresh the page to try again.\" (backend actor not ready / transient connection failure during initialization).",
+    "Some options/screens are still not loading for the user (user reports: \"Come option we are don't enable to load\").",
+    "After login, the app shows a \"can't load\" state and the role selection screen (red/blue boxes) does not appear.",
+    "Login is failing (user reports they cannot successfully log in).",
+    "Role selection screen shows incorrect message implying only admins can choose a role (should allow all users to choose role on first login)."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -175,6 +179,70 @@
         "REQ-22"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-add-explicit-user-friendly-frontend-fallback-states-on-option-pages-that-can-appear-to-not-load-including-onboarding-guard-and-role-based-pages-when-required-data-is-unavailable-e-g-profile-is-null-location-is-missing-actor-is-not-ready-or-a-query-fails-show-clear-english-messaging-and-actionable-controls-e-g-retry-go-to-login-instead-of-only-a-spinner-or-a-silent-non-render-apply-this-to-requireonboarding-recruiter-browsing-and-job-seeker-application-pages-that-depend-on-profile-location-application-queries",
+      "title": "Add explicit, user-friendly frontend fallback states on option/pages that can appear to “not load”, including onboarding guard and role-based pages. When required data is unavailable (e.g., profile is null, location is missing, actor is not ready, or a query fails), show clear English messaging and actionable controls (e.g., Retry, Go to Login) instead of only a spinner or a silent non-render. Apply this to `RequireOnboarding`, recruiter browsing, and job seeker application pages that depend on profile/location/application queries.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-login-to-onboarding-flow-so-users-do-not-get-stuck-on-a-post-login-can-t-load-state-and-the-role-selection-screen-red-search-for-reception-job-and-blue-search-for-receptionist-boxes-always-renders-after-a-successful-login-when-the-user-has-not-completed-onboarding",
+      "title": "Fix the login-to-onboarding flow so users do not get stuck on a post-login 'can't load' state, and the Role Selection screen (red 'Search for reception job' and blue 'Search for receptionist' boxes) always renders after a successful login when the user has not completed onboarding.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-frontend-login-page-to-correctly-interpret-the-backend-authenticateuser-response-and-only-proceed-set-authenticated-session-navigate-to-onboarding-when-authentication-is-successful-show-a-clear-english-error-message-when-credentials-are-invalid",
+      "title": "Update the frontend Login page to correctly interpret the backend authenticateUser response and only proceed (set authenticated session + navigate to onboarding) when authentication is successful; show a clear English error message when credentials are invalid.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-inconsistent-backend-actor-usage-in-onboarding-screens-by-ensuring-the-role-selection-page-uses-the-same-backend-actor-context-as-the-rest-of-the-authenticated-onboarding-flow-backendactorprovider-so-role-selection-calls-and-subsequent-profile-refetching-work-reliably",
+      "title": "Remove inconsistent backend-actor usage in onboarding screens by ensuring the Role Selection page uses the same backend actor context as the rest of the authenticated/onboarding flow (BackendActorProvider), so role selection calls and subsequent profile refetching work reliably.",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-react-query-cache-reset-invalidation-around-the-current-user-profile-query-so-it-correctly-targets-the-same-query-keys-used-by-onboarding-status-including-the-current-user-identity-key-preventing-stale-null-profile-states-that-block-navigation-to-the-role-selection-screen",
+      "title": "Fix React Query cache reset/invalidation around the current user profile query so it correctly targets the same query keys used by onboarding status (including the current user identity key), preventing stale/null profile states that block navigation to the role selection screen.",
+      "reqIds": [
+        "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-signup-ui-frontend-src-features-auth-signuppage-tsx-to-correctly-handle-the-backend-registeruser-result-type-and-show-clear-english-error-messages-using-the-backend-error-codes-e-g-already-registered-unauthorized-instead-of-assuming-success-when-the-call-resolves",
+      "title": "Update the Signup UI (`frontend/src/features/auth/SignupPage.tsx`) to correctly handle the backend `registerUser` Result type and show clear English error messages using the backend error codes (e.g., already registered, unauthorized) instead of assuming success when the call resolves.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-the-frontend-for-any-user-facing-text-that-says-or-implies-that-only-admins-can-choose-a-role-e-g-only-admins-choose-role-and-replace-it-with-accurate-english-messaging-that-indicates-any-logged-in-user-can-choose-their-role-during-onboarding",
+      "title": "Audit the frontend for any user-facing text that says or implies that only admins can choose a role (e.g., \"only admins choose role\"), and replace it with accurate English messaging that indicates any logged-in user can choose their role during onboarding.",
+      "reqIds": [
+        "REQ-38"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-role-selection-page-ensure-that-if-role-selection-fails-due-to-an-authorization-session-issue-the-error-message-shown-to-the-user-is-clear-english-and-does-not-reference-admins-it-must-guide-the-user-to-log-in-again-e-g-provide-a-go-to-login-action",
+      "title": "On the Role Selection page, ensure that if role selection fails due to an authorization/session issue, the error message shown to the user is clear English and does not reference admins; it must guide the user to log in again (e.g., provide a \"Go to Login\" action).",
+      "reqIds": [
+        "REQ-39"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -246,6 +314,78 @@
       "id": "AR-19",
       "summary": "Prevent the \"Failed to connect to the backend system. Please refresh the page to try again.\" message from appearing during backend actor initialization; add resilient retry/ready-state handling instead of surfacing a connection error on the login screen",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Fix backend user identity/storage so multiple users do not overwrite each other and screens do not fail to load due to missing/incorrect profile data. Replace the current hard-coded principal assignment in `registerUser` (currently `Principal.fromText(\"2vxsx-fae\")`) with a stable per-user identifier so each registered email maps to a distinct user record, and update all profile/application storage maps and lookups accordingly.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Update backend error handling for missing user records so the app can recover gracefully instead of leaving users stuck on non-loading screens. Specifically, for onboarding and application methods that currently trap with \"User profile not found\" (e.g., `setUserRole`, `setUserLocation`, `submitJobApplication`, `updateJobApplication`, `getMyJobApplication`, `searchApplicantsByLocation`), return a safe, consistent response or a clear, non-destructive error that the frontend can render and provide a retry/re-login path for.",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Correct the backend authentication/profile linkage so that a successful email/password login can consistently load the correct user profile used for onboarding (role/location), rather than returning null or triggering unauthorized/profile-not-found states.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Re-enable backend email/password account registration in `backend/main.mo` by implementing `registerUser(userProfile, password)` instead of always returning `#err(#unauthorized)`.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-25",
+      "summary": "Re-enable backend email/password login in `backend/main.mo` by implementing `authenticateUser(email, password)` instead of always returning `#err(#unauthorized)` and ensure it authenticates the caller against stored credentials.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-26",
+      "summary": "Make backend profile fetching resilient so a missing profile does not trap: update `getCallerUserProfile()` and `getUserProfile()` in `backend/main.mo` to return `null` (or a non-trapping safe response) when the profile is missing, rather than `Runtime.trap(...)`.",
+      "reqIds": [
+        "REQ-33"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-27",
+      "summary": "Re-enable email/password account registration and login in `backend/main.mo` by implementing `registerUser(userProfile, password)` and `authenticateUser(email, password)` (they currently return `#err(#unauthorized)`), including correct per-user storage so multiple users do not overwrite each other.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-28",
+      "summary": "Make profile fetch methods non-destructive by removing `Runtime.trap(...)` from `getCallerUserProfile()` and `getUserProfile(user)` in `backend/main.mo`; instead return a safe value (`null`) when the profile is missing, and keep authorization checks consistent with existing access-control behavior.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-29",
+      "summary": "Ensure successful email/password authentication results in the caller being treated as an authenticated user for subsequent backend calls that check `AccessControl.hasPermission(..., #user)` (e.g., role/location setters and application methods).",
+      "reqIds": [
+        "REQ-37"
+      ],
       "status": "pending"
     }
   ],

@@ -24,6 +24,18 @@ export const UserRole__1 = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const Error = IDL.Variant({
+  'roleNotSet' : IDL.Null,
+  'recruiterCannotApply' : IDL.Null,
+  'noApplicationFound' : IDL.Null,
+  'alreadyRegistered' : IDL.Null,
+  'jobSeekerCannotSearch' : IDL.Null,
+  'unauthorized' : IDL.Null,
+  'invalidCredentials' : IDL.Null,
+  'roleAlreadySet' : IDL.Null,
+  'profileNotFound' : IDL.Null,
+});
+export const AuthResult = IDL.Variant({ 'ok' : IDL.Null, 'err' : Error });
 export const UserRole = IDL.Variant({
   'jobSeeker' : IDL.Null,
   'recruiter' : IDL.Null,
@@ -48,9 +60,10 @@ export const UserProfile = IDL.Record({
   'phone' : IDL.Text,
   'location' : IDL.Opt(Location),
 });
+export const Principal = IDL.Principal;
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const JobApplicantProfile = IDL.Record({
-  'userId' : IDL.Principal,
+  'userId' : Principal,
   'name' : IDL.Text,
   'email' : IDL.Text,
   'gender' : Gender,
@@ -58,6 +71,16 @@ export const JobApplicantProfile = IDL.Record({
   'photo' : IDL.Opt(ExternalBlob),
   'location' : Location,
 });
+export const JobApplicationResult = IDL.Variant({
+  'ok' : JobApplicantProfile,
+  'err' : Error,
+});
+export const RegisterResult = IDL.Variant({ 'ok' : Principal, 'err' : Error });
+export const JobApplicationsResult = IDL.Variant({
+  'ok' : IDL.Vec(JobApplicantProfile),
+  'err' : Error,
+});
+export const VoidResult = IDL.Variant({ 'ok' : IDL.Null, 'err' : Error });
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -88,31 +111,23 @@ export const idlService = IDL.Service({
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
-  'authenticateUser' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'authenticateUser' : IDL.Func([IDL.Text, IDL.Text], [AuthResult], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole__1], ['query']),
-  'getMyJobApplication' : IDL.Func(
-      [],
-      [IDL.Opt(JobApplicantProfile)],
-      ['query'],
-    ),
-  'getUserProfile' : IDL.Func(
-      [IDL.Principal],
-      [IDL.Opt(UserProfile)],
-      ['query'],
-    ),
+  'getMyJobApplication' : IDL.Func([], [JobApplicationResult], ['query']),
+  'getUserProfile' : IDL.Func([Principal], [IDL.Opt(UserProfile)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'registerUser' : IDL.Func([UserProfile, IDL.Text], [IDL.Principal], []),
+  'registerUser' : IDL.Func([UserProfile, IDL.Text], [RegisterResult], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'searchApplicantsByLocation' : IDL.Func(
       [Location, IDL.Bool],
-      [IDL.Vec(JobApplicantProfile)],
+      [JobApplicationsResult],
       ['query'],
     ),
-  'setUserLocation' : IDL.Func([Location], [], []),
-  'setUserRole' : IDL.Func([UserRole], [], []),
-  'submitJobApplication' : IDL.Func([Location, ExternalBlob], [], []),
-  'updateJobApplication' : IDL.Func([Location, ExternalBlob], [], []),
+  'setUserLocation' : IDL.Func([Location], [VoidResult], []),
+  'setUserRole' : IDL.Func([UserRole], [VoidResult], []),
+  'submitJobApplication' : IDL.Func([Location, ExternalBlob], [VoidResult], []),
+  'updateJobApplication' : IDL.Func([Location, ExternalBlob], [VoidResult], []),
 });
 
 export const idlInitArgs = [];
@@ -134,6 +149,18 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
+  const Error = IDL.Variant({
+    'roleNotSet' : IDL.Null,
+    'recruiterCannotApply' : IDL.Null,
+    'noApplicationFound' : IDL.Null,
+    'alreadyRegistered' : IDL.Null,
+    'jobSeekerCannotSearch' : IDL.Null,
+    'unauthorized' : IDL.Null,
+    'invalidCredentials' : IDL.Null,
+    'roleAlreadySet' : IDL.Null,
+    'profileNotFound' : IDL.Null,
+  });
+  const AuthResult = IDL.Variant({ 'ok' : IDL.Null, 'err' : Error });
   const UserRole = IDL.Variant({
     'jobSeeker' : IDL.Null,
     'recruiter' : IDL.Null,
@@ -158,9 +185,10 @@ export const idlFactory = ({ IDL }) => {
     'phone' : IDL.Text,
     'location' : IDL.Opt(Location),
   });
+  const Principal = IDL.Principal;
   const ExternalBlob = IDL.Vec(IDL.Nat8);
   const JobApplicantProfile = IDL.Record({
-    'userId' : IDL.Principal,
+    'userId' : Principal,
     'name' : IDL.Text,
     'email' : IDL.Text,
     'gender' : Gender,
@@ -168,6 +196,16 @@ export const idlFactory = ({ IDL }) => {
     'photo' : IDL.Opt(ExternalBlob),
     'location' : Location,
   });
+  const JobApplicationResult = IDL.Variant({
+    'ok' : JobApplicantProfile,
+    'err' : Error,
+  });
+  const RegisterResult = IDL.Variant({ 'ok' : Principal, 'err' : Error });
+  const JobApplicationsResult = IDL.Variant({
+    'ok' : IDL.Vec(JobApplicantProfile),
+    'err' : Error,
+  });
+  const VoidResult = IDL.Variant({ 'ok' : IDL.Null, 'err' : Error });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -198,31 +236,31 @@ export const idlFactory = ({ IDL }) => {
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
-    'authenticateUser' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'authenticateUser' : IDL.Func([IDL.Text, IDL.Text], [AuthResult], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole__1], ['query']),
-    'getMyJobApplication' : IDL.Func(
-        [],
-        [IDL.Opt(JobApplicantProfile)],
-        ['query'],
-      ),
-    'getUserProfile' : IDL.Func(
-        [IDL.Principal],
-        [IDL.Opt(UserProfile)],
-        ['query'],
-      ),
+    'getMyJobApplication' : IDL.Func([], [JobApplicationResult], ['query']),
+    'getUserProfile' : IDL.Func([Principal], [IDL.Opt(UserProfile)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'registerUser' : IDL.Func([UserProfile, IDL.Text], [IDL.Principal], []),
+    'registerUser' : IDL.Func([UserProfile, IDL.Text], [RegisterResult], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'searchApplicantsByLocation' : IDL.Func(
         [Location, IDL.Bool],
-        [IDL.Vec(JobApplicantProfile)],
+        [JobApplicationsResult],
         ['query'],
       ),
-    'setUserLocation' : IDL.Func([Location], [], []),
-    'setUserRole' : IDL.Func([UserRole], [], []),
-    'submitJobApplication' : IDL.Func([Location, ExternalBlob], [], []),
-    'updateJobApplication' : IDL.Func([Location, ExternalBlob], [], []),
+    'setUserLocation' : IDL.Func([Location], [VoidResult], []),
+    'setUserRole' : IDL.Func([UserRole], [VoidResult], []),
+    'submitJobApplication' : IDL.Func(
+        [Location, ExternalBlob],
+        [VoidResult],
+        [],
+      ),
+    'updateJobApplication' : IDL.Func(
+        [Location, ExternalBlob],
+        [VoidResult],
+        [],
+      ),
   });
 };
 

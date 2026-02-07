@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useMyApplication } from './useMyApplication';
 import { useActor } from '@/hooks/useActor';
 import { Button } from '@/components/ui/button';
@@ -7,13 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, Save } from 'lucide-react';
-import { Gender, ExternalBlob, type Location } from '@/backend';
+import { Save } from 'lucide-react';
+import { Gender, ExternalBlob, type Location, type VoidResult } from '@/backend';
 import AppLayout from '@/components/AppLayout';
+import AsyncFallbackState from '@/components/AsyncFallbackState';
+import { isErrorResult, mapBackendError } from '@/utils/backendErrors';
 
 export default function JobSeekerHomePage() {
+  const navigate = useNavigate();
   const { actor } = useActor();
-  const { application, isLoading, refetch } = useMyApplication();
+  const { application, isLoading, isError, error, refetch, hasApplication } = useMyApplication();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,7 +28,7 @@ export default function JobSeekerHomePage() {
   const [country, setCountry] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -47,26 +51,26 @@ export default function JobSeekerHomePage() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
+        setSaveError('Please select an image file');
         return;
       }
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
-      setError('');
+      setSaveError('');
     }
   };
 
   const handleSave = async () => {
-    setError('');
+    setSaveError('');
     setSuccess(false);
 
     if (!name || !phone || !city || !district || !state || !country) {
-      setError('Please fill in all fields');
+      setSaveError('Please fill in all fields');
       return;
     }
 
     if (!actor) {
-      setError('System not ready. Please try again.');
+      setSaveError('System not ready. Please try again.');
       return;
     }
 
@@ -82,18 +86,25 @@ export default function JobSeekerHomePage() {
       } else if (application?.photo) {
         photoBlob = application.photo;
       } else {
-        setError('Photo is required');
+        setSaveError('Photo is required');
         setSaving(false);
         return;
       }
 
-      await actor.updateJobApplication(location, photoBlob);
-      setSuccess(true);
-      setEditing(false);
-      await refetch();
-      setTimeout(() => setSuccess(false), 3000);
+      const result: VoidResult = await actor.updateJobApplication(location, photoBlob);
+      
+      // Handle backend Result type
+      if (isErrorResult(result)) {
+        const errorInfo = mapBackendError(result.err);
+        setSaveError(errorInfo.message);
+      } else {
+        setSuccess(true);
+        setEditing(false);
+        await refetch();
+        setTimeout(() => setSuccess(false), 3000);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to update application');
+      setSaveError(err.message || 'Failed to update application');
     } finally {
       setSaving(false);
     }
@@ -102,23 +113,42 @@ export default function JobSeekerHomePage() {
   if (isLoading) {
     return (
       <AppLayout showNav>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-        </div>
+        <AsyncFallbackState state="loading" message="Loading your application..." />
       </AppLayout>
     );
   }
 
-  if (!application) {
+  if (isError) {
     return (
       <AppLayout showNav>
-        <div className="min-h-screen flex items-center justify-center px-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">No application found</p>
-            </CardContent>
-          </Card>
-        </div>
+        <AsyncFallbackState
+          state="error"
+          title="Unable to Load Application"
+          message={error?.message || 'An error occurred while loading your application. Please try again.'}
+          actions={{
+            retry: () => refetch(),
+            goToLogin: true,
+          }}
+        />
+      </AppLayout>
+    );
+  }
+
+  if (!hasApplication || !application) {
+    return (
+      <AppLayout showNav>
+        <AsyncFallbackState
+          state="empty"
+          title="No Application Found"
+          message="You haven't submitted an application yet. Create one to get started."
+          actions={{
+            customAction: {
+              label: 'Create Application',
+              onClick: () => navigate({ to: '/job-seeker/apply' }),
+            },
+            retry: () => refetch(),
+          }}
+        />
       </AppLayout>
     );
   }
@@ -142,9 +172,9 @@ export default function JobSeekerHomePage() {
             </Alert>
           )}
 
-          {error && (
+          {saveError && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{saveError}</AlertDescription>
             </Alert>
           )}
 
@@ -234,48 +264,48 @@ export default function JobSeekerHomePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>City</Label>
+                  <Label>Location</Label>
                   {editing ? (
-                    <Input value={city} onChange={(e) => setCity(e.target.value)} disabled={saving} />
+                    <div className="grid gap-3">
+                      <Input
+                        placeholder="City"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        disabled={saving}
+                      />
+                      <Input
+                        placeholder="District"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        disabled={saving}
+                      />
+                      <Input
+                        placeholder="State"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        disabled={saving}
+                      />
+                      <Input
+                        placeholder="Country"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        disabled={saving}
+                      />
+                    </div>
                   ) : (
-                    <p className="text-lg">{city}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>District</Label>
-                  {editing ? (
-                    <Input value={district} onChange={(e) => setDistrict(e.target.value)} disabled={saving} />
-                  ) : (
-                    <p className="text-lg">{district}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>State</Label>
-                  {editing ? (
-                    <Input value={state} onChange={(e) => setState(e.target.value)} disabled={saving} />
-                  ) : (
-                    <p className="text-lg">{state}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Country</Label>
-                  {editing ? (
-                    <Input value={country} onChange={(e) => setCountry(e.target.value)} disabled={saving} />
-                  ) : (
-                    <p className="text-lg">{country}</p>
+                    <p className="text-lg">
+                      {city}, {district}, {state}, {country}
+                    </p>
                   )}
                 </div>
               </div>
 
               {editing && (
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                   <Button onClick={handleSave} disabled={saving} className="flex-1">
                     {saving ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Save className="mr-2 h-4 w-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
@@ -289,7 +319,7 @@ export default function JobSeekerHomePage() {
                     variant="outline"
                     onClick={() => {
                       setEditing(false);
-                      setError('');
+                      setSaveError('');
                       if (application) {
                         setName(application.name);
                         setPhone(application.phone);

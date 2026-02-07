@@ -20,6 +20,14 @@ export interface Location {
     district: string;
     state: string;
 }
+export type Principal = Principal;
+export type JobApplicationResult = {
+    __kind__: "ok";
+    ok: JobApplicantProfile;
+} | {
+    __kind__: "err";
+    err: Error_;
+};
 export interface JobApplicantProfile {
     userId: Principal;
     name: string;
@@ -29,6 +37,34 @@ export interface JobApplicantProfile {
     photo?: ExternalBlob;
     location: Location;
 }
+export type RegisterResult = {
+    __kind__: "ok";
+    ok: Principal;
+} | {
+    __kind__: "err";
+    err: Error_;
+};
+export type VoidResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "err";
+    err: Error_;
+};
+export type JobApplicationsResult = {
+    __kind__: "ok";
+    ok: Array<JobApplicantProfile>;
+} | {
+    __kind__: "err";
+    err: Error_;
+};
+export type AuthResult = {
+    __kind__: "ok";
+    ok: null;
+} | {
+    __kind__: "err";
+    err: Error_;
+};
 export interface UserProfile {
     name: string;
     role?: UserRole;
@@ -37,6 +73,17 @@ export interface UserProfile {
     onboardingCompleted: boolean;
     phone: string;
     location?: Location;
+}
+export enum Error_ {
+    roleNotSet = "roleNotSet",
+    recruiterCannotApply = "recruiterCannotApply",
+    noApplicationFound = "noApplicationFound",
+    alreadyRegistered = "alreadyRegistered",
+    jobSeekerCannotSearch = "jobSeekerCannotSearch",
+    unauthorized = "unauthorized",
+    invalidCredentials = "invalidCredentials",
+    roleAlreadySet = "roleAlreadySet",
+    profileNotFound = "profileNotFound"
 }
 export enum Gender {
     other = "other",
@@ -54,17 +101,17 @@ export enum UserRole__1 {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole__1): Promise<void>;
-    authenticateUser(email: string, password: string): Promise<boolean>;
+    authenticateUser(email: string, password: string): Promise<AuthResult>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole__1>;
-    getMyJobApplication(): Promise<JobApplicantProfile | null>;
+    getMyJobApplication(): Promise<JobApplicationResult>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
-    registerUser(userProfile: UserProfile, password: string): Promise<Principal>;
+    registerUser(userProfile: UserProfile, password: string): Promise<RegisterResult>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    searchApplicantsByLocation(location: Location, _includePhoto: boolean): Promise<Array<JobApplicantProfile>>;
-    setUserLocation(location: Location): Promise<void>;
-    setUserRole(role: UserRole): Promise<void>;
-    submitJobApplication(location: Location, photo: ExternalBlob): Promise<void>;
-    updateJobApplication(location: Location, photo: ExternalBlob): Promise<void>;
+    searchApplicantsByLocation(location: Location, _includePhoto: boolean): Promise<JobApplicationsResult>;
+    setUserLocation(location: Location): Promise<VoidResult>;
+    setUserRole(role: UserRole): Promise<VoidResult>;
+    submitJobApplication(location: Location, photo: ExternalBlob): Promise<VoidResult>;
+    updateJobApplication(location: Location, photo: ExternalBlob): Promise<VoidResult>;
 }

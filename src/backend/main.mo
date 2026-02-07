@@ -10,33 +10,12 @@ import ExternalBlob "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 
+
+
 actor {
-  let storage = Map.empty<Text, ExternalBlob.ExternalBlob>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
-  let jobApplicantProfiles = Map.empty<Principal, JobApplicantProfile>();
-  let userCredentials = Map.empty<Text, UserCredential>();
-  let emailToPrincipal = Map.empty<Text, Principal>();
-
-  let accessControlState = AccessControl.initState();
-  include MixinAuthorization(accessControlState);
-  include MixinStorage();
-
   type UserCredential = {
-    principal : Principal;
-    // NOTE: Storing passwords as cleartext for demonstration purposes only. 
-    // Proper password hashing must be implemented in production.
+    principal : Principal.Principal;
     password : Text;
-  };
-
-  type Profile = {
-    name : Text;
-    email : Text;
-    phone : Text;
-    gender : Gender;
-    image : ?ExternalBlob.ExternalBlob;
-    role : ?UserRole;
-    location : ?Location;
-    onboardingCompleted : Bool;
   };
 
   type Gender = {
@@ -68,7 +47,7 @@ actor {
   };
 
   public type JobApplicantProfile = {
-    userId : Principal;
+    userId : Principal.Principal;
     name : Text;
     email : Text;
     phone : Text;
@@ -83,64 +62,131 @@ actor {
     };
   };
 
-  // Public registration - no authentication required (guests can register)
-  public func registerUser(userProfile : UserProfile, password : Text) : async Principal {
-    // Check if email already exists
-    if (emailToPrincipal.containsKey(userProfile.email)) {
-      Runtime.trap("Email already registered");
-    };
-
-    // Create a pseudo-principal based on email for this demo
-    // In production, this would be handled differently
-    let userPrincipal = Principal.fromText("2vxsx-fae");
-    
-    // Store credentials
-    let credential : UserCredential = {
-      principal = userPrincipal;
-      password;
-    };
-    userCredentials.add(userProfile.email, credential);
-    emailToPrincipal.add(userProfile.email, userPrincipal);
-    
-    // Store user profile
-    userProfiles.add(userPrincipal, userProfile);
-    
-    userPrincipal;
+  type Error = {
+    #alreadyRegistered;
+    #invalidCredentials;
+    #unauthorized;
+    #profileNotFound;
+    #roleAlreadySet;
+    #noApplicationFound;
+    #roleNotSet;
+    #recruiterCannotApply;
+    #jobSeekerCannotSearch;
   };
 
-  // Public authentication - no authentication required (for login)
-  public func authenticateUser(email : Text, password : Text) : async Bool {
+  public type RegisterResult = {
+    #ok : Principal.Principal;
+    #err : Error;
+  };
+
+  public type AuthResult = {
+    #ok;
+    #err : Error;
+  };
+
+  public type ProfileResult = {
+    #ok : UserProfile;
+    #err : Error;
+  };
+
+  public type JobApplicationResult = {
+    #ok : JobApplicantProfile;
+    #err : Error;
+  };
+
+  public type JobApplicationsResult = {
+    #ok : [JobApplicantProfile];
+    #err : Error;
+  };
+
+  public type VoidResult = {
+    #ok;
+    #err : Error;
+  };
+
+  // Internal map of principals to emails for reverse lookups (used for getCallerUserProfile)
+  let principalToEmail = Map.empty<Principal.Principal, Text>();
+
+  // Email to credential mapping for authentication
+  let userCredentials = Map.empty<Text, UserCredential>();
+
+  // Principal to user profiles
+  let userProfiles = Map.empty<Principal.Principal, UserProfile>();
+
+  // Principal to job application profiles
+  let jobApplicantProfiles = Map.empty<Principal.Principal, JobApplicantProfile>();
+
+  // Initialize authentication system
+  let accessControlState = AccessControl.initState();
+
+  // Mixins for blob storage, file management, and authorization
+  include MixinAuthorization(accessControlState);
+  include MixinStorage();
+
+  public shared ({ caller }) func registerUser(userProfile : UserProfile, password : Text) : async RegisterResult {
+    switch (userCredentials.get(userProfile.email)) {
+      case (?_) {
+        return #err(#alreadyRegistered);
+      };
+      case (null) {
+        // Create and store user credential
+        let newCredential : UserCredential = {
+          principal = caller;
+          password;
+        };
+        userCredentials.add(userProfile.email, newCredential);
+
+        // Store user profile
+        userProfiles.add(caller, userProfile);
+
+        // Map principal to email for reverse lookup
+        principalToEmail.add(caller, userProfile.email);
+
+        // Assign #user role to the newly registered principal
+        // This integrates email/password auth with the AccessControl system
+        AccessControl.assignRole(accessControlState, caller, caller, #user);
+
+        return #ok(caller);
+      };
+    };
+  };
+
+  public shared ({ caller }) func authenticateUser(email : Text, password : Text) : async AuthResult {
     switch (userCredentials.get(email)) {
-      case (null) { 
-        Runtime.trap("Invalid email or password");
+      case (null) {
+        return #err(#invalidCredentials);
       };
       case (?credential) {
-        if (credential.password == password) {
-          true;
-        } else {
-          Runtime.trap("Invalid email or password");
+        if (credential.password != password) {
+          return #err(#invalidCredentials);
         };
+
+        // Ensure principal-email mapping exists
+        principalToEmail.add(credential.principal, email);
+
+        // Ensure the authenticated principal has #user role
+        // This allows subsequent calls from this principal to pass authorization checks
+        AccessControl.assignRole(accessControlState, credential.principal, credential.principal, #user);
+
+        #ok;
       };
     };
   };
 
-  // Get caller's own profile - requires user permission
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can view profiles");
+      return null;
     };
     userProfiles.get(caller);
   };
 
-  // Get another user's profile - requires admin or self
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+  public query ({ caller }) func getUserProfile(user : Principal.Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
+      return null;
     };
     userProfiles.get(user);
   };
 
-  // Save caller's profile - requires user permission
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only authenticated users can save profiles");
@@ -148,21 +194,20 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Set user role - requires user permission, can only be set once during onboarding
-  public shared ({ caller }) func setUserRole(role : UserRole) : async () {
+  public shared ({ caller }) func setUserRole(role : UserRole) : async VoidResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can set role");
+      return #err(#unauthorized);
     };
-    
+
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
         // Check if role already set
         switch (profile.role) {
-          case (?_) { 
-            Runtime.trap("Role already set for this user");
+          case (?_) {
+            #err(#roleAlreadySet);
           };
           case (null) {
             let updatedProfile : UserProfile = {
@@ -175,21 +220,21 @@ actor {
               onboardingCompleted = profile.onboardingCompleted;
             };
             userProfiles.add(caller, updatedProfile);
+            #ok;
           };
         };
       };
     };
   };
 
-  // Set user location - requires user permission
-  public shared ({ caller }) func setUserLocation(location : Location) : async () {
+  public shared ({ caller }) func setUserLocation(location : Location) : async VoidResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can set location");
+      return #err(#unauthorized);
     };
-    
+
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
         let updatedProfile : UserProfile = {
@@ -202,25 +247,23 @@ actor {
           onboardingCompleted = true;
         };
         userProfiles.add(caller, updatedProfile);
+        #ok;
       };
     };
   };
 
-  // Submit job application - requires user permission AND job seeker role
-  public shared ({ caller }) func submitJobApplication(location : Location, photo : ExternalBlob.ExternalBlob) : async () {
+  public shared ({ caller }) func submitJobApplication(location : Location, photo : ExternalBlob.ExternalBlob) : async VoidResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can submit applications");
+      return #err(#unauthorized);
     };
 
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
-        // Verify user has job seeker role
         switch (profile.role) {
           case (?#jobSeeker) {
-            // Authorized - proceed with application
             let jobApplicant : JobApplicantProfile = {
               userId = caller;
               name = profile.name;
@@ -231,39 +274,36 @@ actor {
               photo = ?photo;
             };
             jobApplicantProfiles.add(caller, jobApplicant);
+            #ok;
           };
           case (?#recruiter) {
-            Runtime.trap("Unauthorized: Recruiters cannot submit job applications");
+            #err(#recruiterCannotApply);
           };
           case (null) {
-            Runtime.trap("Unauthorized: User role not set");
+            #err(#roleNotSet);
           };
         };
       };
     };
   };
 
-  // Update job application - requires user permission AND job seeker role AND ownership
-  public shared ({ caller }) func updateJobApplication(location : Location, photo : ExternalBlob.ExternalBlob) : async () {
+  public shared ({ caller }) func updateJobApplication(location : Location, photo : ExternalBlob.ExternalBlob) : async VoidResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can update applications");
+      return #err(#unauthorized);
     };
 
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
-        // Verify user has job seeker role
         switch (profile.role) {
           case (?#jobSeeker) {
-            // Verify user owns an application
             switch (jobApplicantProfiles.get(caller)) {
               case (null) {
-                Runtime.trap("No application found to update");
+                #err(#noApplicationFound);
               };
               case (?_) {
-                // Authorized - update application
                 let updatedApplicant : JobApplicantProfile = {
                   userId = caller;
                   name = profile.name;
@@ -274,77 +314,78 @@ actor {
                   photo = ?photo;
                 };
                 jobApplicantProfiles.add(caller, updatedApplicant);
+                #ok;
               };
             };
           };
           case (?#recruiter) {
-            Runtime.trap("Unauthorized: Recruiters cannot update job applications");
+            #err(#recruiterCannotApply);
           };
           case (null) {
-            Runtime.trap("Unauthorized: User role not set");
+            #err(#roleNotSet);
           };
         };
       };
     };
   };
 
-  // Get caller's job application - requires user permission AND job seeker role
-  public query ({ caller }) func getMyJobApplication() : async ?JobApplicantProfile {
+  public query ({ caller }) func getMyJobApplication() : async JobApplicationResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can view applications");
+      return #err(#unauthorized);
     };
 
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
         switch (profile.role) {
           case (?#jobSeeker) {
-            jobApplicantProfiles.get(caller);
+            switch (jobApplicantProfiles.get(caller)) {
+              case (null) {
+                #err(#noApplicationFound);
+              };
+              case (?applicant) {
+                #ok(applicant);
+              };
+            };
           };
           case (?#recruiter) {
-            Runtime.trap("Unauthorized: Recruiters cannot view job applications this way");
+            #err(#recruiterCannotApply);
           };
           case (null) {
-            Runtime.trap("Unauthorized: User role not set");
+            #err(#roleNotSet);
           };
         };
       };
     };
   };
 
-  // Search applicants by location - requires user permission AND recruiter role
-  public query ({ caller }) func searchApplicantsByLocation(location : Location, _includePhoto : Bool) : async [JobApplicantProfile] {
+  public query ({ caller }) func searchApplicantsByLocation(location : Location, _includePhoto : Bool) : async JobApplicationsResult {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authenticated users can search applicants");
+      return #err(#unauthorized);
     };
 
     switch (userProfiles.get(caller)) {
-      case (null) { 
-        Runtime.trap("User profile not found");
+      case (null) {
+        #err(#profileNotFound);
       };
       case (?profile) {
-        // Verify user has recruiter role
         switch (profile.role) {
           case (?#recruiter) {
-            // Authorized - search applicants
             let applicants = jobApplicantProfiles.values().toArray().sort(JobApplicantProfile.compareByLocation);
             let filteredApplicants = applicants.filter(
               func(applicant) {
-                applicant.location.city == location.city and
-                applicant.location.district == location.district and
-                applicant.location.state == location.state and
-                applicant.location.country == location.country
+                applicant.location.city == location.city and applicant.location.district == location.district and applicant.location.state == location.state and applicant.location.country == location.country
               }
             );
-            filteredApplicants;
+            #ok(filteredApplicants);
           };
           case (?#jobSeeker) {
-            Runtime.trap("Unauthorized: Job seekers cannot search for applicants");
+            #err(#jobSeekerCannotSearch);
           };
           case (null) {
-            Runtime.trap("Unauthorized: User role not set");
+            #err(#roleNotSet);
           };
         };
       };

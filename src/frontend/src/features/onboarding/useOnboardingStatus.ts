@@ -19,6 +19,9 @@ export function useOnboardingStatus() {
     // Enable retry with exponential backoff
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * Math.pow(2, attemptIndex), 10000),
+    // Prevent refetching while actor is initializing
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   // Determine if we're in a loading/connecting state
@@ -30,11 +33,15 @@ export function useOnboardingStatus() {
   // Only show error if retries are exhausted and actor is ready
   const isTerminalError = query.isError && !query.isFetching && isReady && !isInitializing;
 
+  // Distinguish between null profile (not found) and error
+  const isProfileNull = isTrulyFetched && query.data === null && !query.isError;
+
   return {
     profile: query.data,
     isLoading: isLoadingOrConnecting,
     isFetched: isTrulyFetched,
     isError: isTerminalError,
+    isProfileNull,
     error: query.error,
     refetch: query.refetch,
     isRetrying: query.isFetching && query.isError,

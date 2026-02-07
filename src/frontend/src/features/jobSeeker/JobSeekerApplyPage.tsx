@@ -7,20 +7,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Upload, CheckCircle2 } from 'lucide-react';
-import { ExternalBlob } from '@/backend';
+import { Loader2, Upload } from 'lucide-react';
+import { ExternalBlob, type Location, type VoidResult } from '@/backend';
 import AppLayout from '@/components/AppLayout';
+import AsyncFallbackState from '@/components/AsyncFallbackState';
+import { isErrorResult, mapBackendError } from '@/utils/backendErrors';
 
 export default function JobSeekerApplyPage() {
   const navigate = useNavigate();
   const { actor } = useActor();
-  const { profile } = useOnboardingStatus();
+  const { profile, isLoading: profileLoading } = useOnboardingStatus();
+  const [city, setCity] = useState('');
+  const [district, setDistrict] = useState('');
+  const [state, setState] = useState('');
+  const [country, setCountry] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -38,150 +42,202 @@ export default function JobSeekerApplyPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess(false);
 
-    if (!selectedFile) {
-      setError('Please select a photo to upload');
+    if (!city || !district || !state || !country) {
+      setError('Please fill in all location fields');
       return;
     }
 
-    if (!actor || !profile?.location) {
+    if (!selectedFile) {
+      setError('Please upload a photo');
+      return;
+    }
+
+    if (!actor) {
       setError('System not ready. Please try again.');
       return;
     }
 
-    setLoading(true);
-    setUploadProgress(0);
+    if (!profile) {
+      setError('Your profile is not loaded. Please refresh the page.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
+      const location: Location = { city, district, state, country };
       const arrayBuffer = await selectedFile.arrayBuffer();
       const bytes = new Uint8Array(arrayBuffer);
-      const blob = ExternalBlob.fromBytes(bytes).withUploadProgress((percentage) => {
-        setUploadProgress(percentage);
-      });
+      const photoBlob = ExternalBlob.fromBytes(bytes);
 
-      await actor.submitJobApplication(profile.location, blob);
-      setSuccess(true);
-      setTimeout(() => {
+      const result: VoidResult = await actor.submitJobApplication(location, photoBlob);
+      
+      // Handle backend Result type
+      if (isErrorResult(result)) {
+        const errorInfo = mapBackendError(result.err);
+        setError(errorInfo.message);
+      } else {
         navigate({ to: '/job-seeker/home' });
-      }, 2000);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to submit application');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (success) {
+  if (profileLoading) {
     return (
-      <AppLayout>
-        <div className="min-h-screen flex items-center justify-center px-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <CheckCircle2 className="h-16 w-16 text-green-600" />
-                </div>
-                <h2 className="text-2xl font-bold">Your application applied.</h2>
-                <p className="text-muted-foreground">Redirecting to your profile...</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <AppLayout showNav>
+        <AsyncFallbackState state="loading" message="Loading your profile..." />
+      </AppLayout>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <AppLayout showNav>
+        <AsyncFallbackState
+          state="error"
+          title="Profile Not Found"
+          message="Your profile could not be loaded. Please log in again."
+          actions={{
+            goToLogin: true,
+          }}
+        />
+      </AppLayout>
+    );
+  }
+
+  if (!profile.location) {
+    return (
+      <AppLayout showNav>
+        <AsyncFallbackState
+          state="empty"
+          title="Location Not Set"
+          message="Please complete your onboarding to set your location before applying."
+          actions={{
+            goToOnboarding: true,
+          }}
+        />
       </AppLayout>
     );
   }
 
   return (
     <AppLayout showNav>
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Submit Your Application</CardTitle>
-            <CardDescription className="text-center">
-              Upload your photo to complete your profile
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+      <div className="min-h-screen px-4 py-12">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle>Submit Your Application</CardTitle>
+              <CardDescription>
+                Fill in your details to apply for healthcare reception positions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-              <div className="space-y-4">
-                <Label>Your Photo</Label>
-                <div className="border-2 border-dashed rounded-lg p-6 text-center space-y-4">
-                  {previewUrl ? (
-                    <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="photo">Profile Photo *</Label>
+                  <div className="flex items-center gap-4">
+                    {previewUrl && (
                       <img
                         src={previewUrl}
                         alt="Preview"
-                        className="mx-auto h-48 w-48 object-cover rounded-lg"
+                        className="h-24 w-24 object-cover rounded-full"
                       />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          setPreviewUrl(null);
-                        }}
-                        disabled={loading}
-                      >
-                        Change Photo
-                      </Button>
+                    )}
+                    <div className="flex-1">
+                      <Label htmlFor="photo" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-500 transition-colors">
+                          <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-600">
+                            Click to upload or drag and drop
+                          </p>
+                        </div>
+                        <Input
+                          id="photo"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleFileSelect}
+                          disabled={submitting}
+                        />
+                      </Label>
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-semibold">Location Details</h3>
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Enter city"
+                        disabled={submitting}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="district">District *</Label>
+                      <Input
+                        id="district"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        placeholder="Enter district"
+                        disabled={submitting}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State *</Label>
+                      <Input
+                        id="state"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        placeholder="Enter state"
+                        disabled={submitting}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country *</Label>
+                      <Input
+                        id="country"
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        placeholder="Enter country"
+                        disabled={submitting}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
                   ) : (
-                    <div className="space-y-4">
-                      <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
-                      <div>
-                        <Label htmlFor="photo" className="cursor-pointer">
-                          <span className="text-teal-600 hover:text-teal-700 font-semibold">
-                            Choose a photo
-                          </span>
-                          <Input
-                            id="photo"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleFileSelect}
-                            disabled={loading}
-                          />
-                        </Label>
-                      </div>
-                    </div>
+                    'Submit Application'
                   )}
-                </div>
-              </div>
-
-              {loading && uploadProgress > 0 && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-teal-600 h-2 rounded-full transition-all"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading || !selectedFile}>
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  'Submit Application'
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );
