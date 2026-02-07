@@ -1,0 +1,75 @@
+{
+  "kind": "build_request",
+  "title": "Remove recurring post-login error screen by adding resilient profile loading and retry behavior",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-20",
+      "text": "Prevent the post-login onboarding guard from repeatedly showing the destructive error screen (\"Unable to load your account\") for transient profile-load failures by adding automatic retry/backoff for fetching the current user profile and only surfacing a destructive error after retries are exhausted.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "This coming again and again please remove this"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When `getCallerUserProfile()` fails due to transient conditions (e.g., actor not ready/temporary network error), the app automatically retries with a short backoff and continues to show a non-destructive loading state (not the destructive error screen).",
+        "The destructive error UI (\"Unable to load your account\") is shown only after the configured retry attempts are exhausted, and provides a working retry action.",
+        "A successful subsequent retry transitions into the correct onboarding route without requiring a page refresh."
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "text": "Update the onboarding status query behavior so that it is resilient and does not immediately fail on first attempt: configure React Query retries for the current user profile query and ensure error messages shown to users are generic, English, and do not instruct users to refresh the page.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "This coming again and again please remove this"
+        ]
+      },
+      "acceptanceCriteria": [
+        "`useOnboardingStatus` uses React Query retry (with a reasonable retry count and delay) instead of `retry: false`.",
+        "User-facing text during initialization/retry remains non-destructive (e.g., continues to communicate loading/connecting) and does not tell the user to refresh the page.",
+        "If retries are exhausted, the user sees an English error message and a retry button that triggers a refetch."
+      ]
+    },
+    {
+      "id": "REQ-22",
+      "text": "Ensure the backend actor initialization / access-control initialization state does not trigger repeated onboarding/profile errors: keep the onboarding/profile queries disabled until the backend actor is fully ready, and avoid any state transitions that would cause repeated error->retry loops during actor initialization.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "This coming again and again please remove this"
+        ]
+      },
+      "acceptanceCriteria": [
+        "While the backend actor is initializing/retrying, onboarding-related pages remain in a stable loading/connecting state and do not flicker between loading and destructive error.",
+        "Onboarding/profile queries only run when the backend actor is ready (after `_initializeAccessControlWithSecret` completes).",
+        "After actor readiness is reached, profile fetching proceeds normally and routes correctly based on the loaded profile."
+      ]
+    }
+  ],
+  "constraints": [
+    "Frontend immutable paths must not be edited: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Keep all user-facing text in English.",
+    "Respect the existing single-backend-actor architecture; do not introduce additional backend services."
+  ],
+  "nonGoals": [
+    "Do not change the onboarding steps, routes, or role/location logic beyond improving stability of loading/retry/error handling.",
+    "Do not add new authentication providers or third-party integrations.",
+    "Do not redesign the UI theme; focus only on removing the recurring error experience."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

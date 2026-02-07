@@ -1,0 +1,67 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-prevent-the-post-login-onboarding-guard-from-repeatedly-showing-the-destructive-error-screen-unable-to-load-your-account-for-transient-profile-load-failures-by-adding-automatic-retry-backoff-for-fetching-the-current-user-profile-and-only-surfacing-a-destructive-error-after-retries-are-exhausted",
+      "featureTitle": "Prevent the post-login onboarding guard from repeatedly showing the destructive error screen (\"Unable to load your account\") for transient profile-load failures by adding automatic retry/backoff for fetching the current user profile and only surfacing a destructive error after retries are exhausted.",
+      "files": [
+        "frontend/src/features/onboarding/RequireOnboarding.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-20"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-onboarding-status-query-behavior-so-that-it-is-resilient-and-does-not-immediately-fail-on-first-attempt-configure-react-query-retries-for-the-current-user-profile-query-and-ensure-error-messages-shown-to-users-are-generic-english-and-do-not-instruct-users-to-refresh-the-page",
+      "featureTitle": "Update the onboarding status query behavior so that it is resilient and does not immediately fail on first attempt: configure React Query retries for the current user profile query and ensure error messages shown to users are generic, English, and do not instruct users to refresh the page.",
+      "files": [
+        "frontend/src/features/onboarding/useOnboardingStatus.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-21"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-backend-actor-initialization-access-control-initialization-state-does-not-trigger-repeated-onboarding-profile-errors-keep-the-onboarding-profile-queries-disabled-until-the-backend-actor-is-fully-ready-and-avoid-any-state-transitions-that-would-cause-repeated-error-retry-loops-during-actor-initialization",
+      "featureTitle": "Ensure the backend actor initialization / access-control initialization state does not trigger repeated onboarding/profile errors: keep the onboarding/profile queries disabled until the backend actor is fully ready, and avoid any state transitions that would cause repeated error->retry loops during actor initialization.",
+      "files": [
+        "frontend/src/features/actor/BackendActorProvider.tsx",
+        "frontend/src/features/onboarding/RequireOnboarding.tsx",
+        "frontend/src/features/onboarding/useOnboardingStatus.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "blob-storage@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-22"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

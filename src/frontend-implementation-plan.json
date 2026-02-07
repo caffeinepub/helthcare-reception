@@ -1,0 +1,65 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Resilient onboarding profile loading with React Query retry/backoff and stable actor-ready gating",
+  "requirements": [
+    {
+      "id": "REQ-20",
+      "summary": "Keep post-login onboarding guard in a non-destructive loading state during transient profile-load failures, and only show the destructive error screen after retries are exhausted with a working retry action.",
+      "acceptanceCriteria": [
+        "When `getCallerUserProfile()` fails due to transient conditions (e.g., actor not ready/temporary network error), the app automatically retries with a short backoff and continues to show a non-destructive loading state (not the destructive error screen).",
+        "The destructive error UI (\"Unable to load your account\") is shown only after the configured retry attempts are exhausted, and provides a working retry action.",
+        "A successful subsequent retry transitions into the correct onboarding route without requiring a page refresh."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/onboarding/RequireOnboarding.tsx",
+          "operation": "modify",
+          "description": "Update the guard UI logic to treat React Query retry-in-progress as a non-destructive loading/connecting state (preventing repeated display of the destructive error screen). Only render the destructive \"Unable to load your account\" UI when retries are exhausted, and ensure the Retry button triggers a working refetch that can transition into the correct onboarding route without refresh. Keep all user-facing text generic and English (do not display raw exception messages). Use the authorization component guidance for profile loading stability with actor-dependent queries; verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "summary": "Make `useOnboardingStatus` resilient by enabling React Query retries/backoff and ensuring user-facing errors are generic English without refresh instructions, with a retry button that refetches.",
+      "acceptanceCriteria": [
+        "`useOnboardingStatus` uses React Query retry (with a reasonable retry count and delay) instead of `retry: false`.",
+        "User-facing text during initialization/retry remains non-destructive (e.g., continues to communicate loading/connecting) and does not tell the user to refresh the page.",
+        "If retries are exhausted, the user sees an English error message and a retry button that triggers a refetch."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/onboarding/useOnboardingStatus.ts",
+          "operation": "modify",
+          "description": "Configure React Query retry behavior for the current user profile query (reasonable retry count with backoff delay) instead of `retry: false`. Expose enough derived state (e.g., whether profile fetching is retrying vs. terminally failed, and whether retries are exhausted) so the onboarding guard can keep a stable non-destructive loading/connecting UI during retries and only show a terminal error afterward. Ensure any surfaced user-facing error messaging remains generic, English, and does not instruct users to refresh the page. Align with authorization component recommendations for actor-dependent profile queries; verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-22",
+      "summary": "Prevent actor initialization from causing repeated onboarding/profile error loops by keeping queries disabled until actor readiness and resetting/canceling stale profile query state during actor re-initialization.",
+      "acceptanceCriteria": [
+        "While the backend actor is initializing/retrying, onboarding-related pages remain in a stable loading/connecting state and do not flicker between loading and destructive error.",
+        "Onboarding/profile queries only run when the backend actor is ready (after `_initializeAccessControlWithSecret` completes).",
+        "After actor readiness is reached, profile fetching proceeds normally and routes correctly based on the loaded profile."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/features/actor/BackendActorProvider.tsx",
+          "operation": "modify",
+          "description": "Harden actor re-initialization flow to avoid repeated onboarding/profile error->retry loops during initialization: when initialization starts, cancel and reset the cached onboarding/profile query state so stale errors do not persist across actor readiness transitions, and keep readiness flags consistent so onboarding/profile queries remain disabled until initialization fully completes. (Do not edit immutable hook paths; keep within this provider.)"
+        },
+        {
+          "path": "frontend/src/features/onboarding/useOnboardingStatus.ts",
+          "operation": "modify",
+          "description": "Ensure the profile query remains strictly gated behind actor readiness (and authentication) and that its returned loading state stays stable while the actor is initializing/retrying, preventing UI flicker between loading and destructive error during actor initialization. Use the authorization component guidance for actor-ready gating; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/features/onboarding/RequireOnboarding.tsx",
+          "operation": "modify",
+          "description": "Ensure the onboarding guard prioritizes stable loading/connecting UI whenever actor initialization is in progress or the profile query is disabled, and never shows the destructive error view during actor initialization transitions. Keep all user-facing text English. Use the authorization component guidance for onboarding/profile gating; verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

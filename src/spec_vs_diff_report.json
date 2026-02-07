@@ -1,0 +1,31 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-07T09:36:31.314Z",
+  "summary": "The diff implements resilient onboarding/profile loading by adding React Query retries with backoff, gating the profile query on backend actor readiness, and keeping the onboarding guard in a stable loading state until retries are exhausted. It also introduces additional backend-actor initialization retry/reset behavior and invalidates extra queries beyond the profile query.",
+  "missing_requirements": [],
+  "hallucinated_features": [
+    {
+      "description": "Backend actor initialization now cancels/resets the profile query and invalidates additional non-profile queries ('myJobApplication', 'applicantsByLocation') on successful init.",
+      "reason": "REQ-20/21/22 focus on onboarding/profile loading retry behavior and gating on actor readiness; explicitly adding cache management and invalidation for other feature queries is not requested in the BuildRequest.",
+      "evidence": [
+        "frontend/src/features/actor/BackendActorProvider.tsx"
+      ]
+    },
+    {
+      "description": "Introduced a BackendActorProvider context API with explicit initialization state (isReady/isInitializing/isRetrying/retryCount/maxRetries/initError) and a user-facing initError message for backend connection failures.",
+      "reason": "While actor readiness gating is required (REQ-22), the additional context surface area and the specific 'Unable to connect to the backend system...' terminal error messaging/retry mechanism is more than what is explicitly requested for onboarding/profile error stability.",
+      "evidence": [
+        "frontend/src/features/actor/BackendActorProvider.tsx"
+      ]
+    }
+  ],
+  "confidence": 0.74,
+  "changed_files": [
+    "frontend-file-summaries.txt",
+    "frontend/src/features/actor/BackendActorProvider.tsx",
+    "frontend/src/features/onboarding/RequireOnboarding.tsx",
+    "frontend/src/features/onboarding/useOnboardingStatus.ts",
+    "project_state.json"
+  ]
+}

@@ -1,0 +1,256 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 13,
+  "summary": "Build a mobile app called \"Helthcare Reception\" with welcome screen, authentication (login + create account), first-time role selection (job seeker vs recruiter) with area details, job seeker application upload, and recruiter browsing of local applicants.",
+  "architectural_notes": [
+    "Persist user account and login session data.",
+    "Store applicant profiles (name, email, phone, gender, photo, area) and support querying applicants by area for recruiter flow.",
+    "Role selection should be asked only on first login; allow returning users to go directly to their role home flow.",
+    "Treat backend actor initialization as a first-class readiness state; avoid firing authenticated/profile queries until backend connectivity is confirmed, and use retry/backoff rather than showing a refresh-required error."
+  ],
+  "known_issues": [
+    "Performance issue: After logging in, the next page/screen takes a long time to open (slow post-login navigation/loading).",
+    "After login, an error message appears: \"Unable to load your account\" (post-login profile/account load failing).",
+    "Login page: input boxes/fields are not working (cannot interact/type/tap).",
+    "Login flow shows error: \"Failed to connect to the backend system. Please refresh the page to try again.\" (backend actor not ready / transient connection failure during initialization)."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-set-the-application-name-branding-to-helthcare-reception-and-implement-a-launch-welcome-screen-that-displays-the-text-welcome-to-helthcare-reception-before-navigating-into-authentication",
+      "title": "Set the application name/branding to \"Helthcare Reception\" and implement a launch/welcome screen that displays the text \"Welcome to helthcare reception.\" before navigating into authentication.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-email-password-login-ui-and-backend-api-users-can-log-in-using-email-id-and-password-successful-login-establishes-an-authenticated-session-state-in-the-frontend",
+      "title": "Implement email/password login UI and backend API: users can log in using Email ID and Password; successful login establishes an authenticated session state in the frontend.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-account-creation-sign-up-ui-and-backend-api-that-collects-name-email-phone-number-gender-and-password-after-successful-sign-up-redirect-the-user-to-the-login-screen",
+      "title": "Implement account creation (sign up) UI and backend API that collects Name, Email, Phone Number, Gender, and Password; after successful sign up, redirect the user to the login screen.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-after-login-show-a-role-selection-screen-with-exactly-two-large-selectable-boxes-1-red-box-labeled-search-for-reception-job-and-2-blue-box-labeled-search-for-receptionist-this-role-selection-should-only-be-asked-once-first-time-after-the-user-s-first-successful-login-and-not-shown-again-on-subsequent-logins-unless-the-user-has-not-completed-onboarding",
+      "title": "After login, show a role selection screen with exactly two large selectable boxes: (1) red box labeled \"Search for reception job\" and (2) blue box labeled \"Search for receptionist\". This role selection should only be asked once (first time after the user's first successful login) and not shown again on subsequent logins unless the user has not completed onboarding.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-the-one-time-area-location-details-form-city-district-state-country-that-is-presented-after-role-selection-for-both-roles-and-persist-these-fields-to-the-backend-associated-with-the-logged-in-user",
+      "title": "Implement the one-time area/location details form (City, District, State, Country) that is presented after role selection for both roles, and persist these fields to the backend associated with the logged-in user.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-job-seeker-flow-red-role-search-for-reception-job-after-area-submission-allow-the-user-to-upload-a-photo-from-their-device-and-submit-an-application-persist-an-application-record-containing-the-user-s-name-email-phone-number-gender-area-city-district-state-country-and-uploaded-photo-after-submission-show-a-confirmation-message-your-application-applied",
+      "title": "Job seeker flow (red role: \"Search for reception job\"): after area submission, allow the user to upload a photo from their device and submit an application; persist an application record containing the user's Name, Email, Phone Number, Gender, Area (City/District/State/Country), and uploaded Photo; after submission show a confirmation message \"Your application applied.\"",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-job-seeker-home-page-red-role-provide-a-screen-where-the-job-seeker-can-view-their-submitted-application-data-and-update-change-their-information-including-area-fields-and-photo-and-re-submit-to-save-changes",
+      "title": "Job seeker home page (red role): provide a screen where the job seeker can view their submitted application data and update/change their information (including area fields and photo) and re-submit to save changes.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-recruiter-flow-blue-role-search-for-receptionist-after-area-submission-show-a-list-of-job-seeker-applications-red-role-users-whose-area-matches-the-recruiter-s-area-display-at-minimum-name-email-phone-number-gender-and-the-submitted-photo-for-each-matching-applicant",
+      "title": "Recruiter flow (blue role: \"Search for receptionist\"): after area submission, show a list of job seeker applications (red-role users) whose area matches the recruiter's area; display at minimum Name, Email, Phone Number, Gender, and the submitted Photo for each matching applicant.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-apply-a-consistent-creative-visual-theme-across-the-frontend-colors-typography-layout-appropriate-for-a-healthcare-reception-marketplace-avoid-using-a-blue-purple-primary-combo",
+      "title": "Apply a consistent, creative visual theme across the frontend (colors, typography, layout) appropriate for a healthcare reception marketplace; avoid using a blue+purple primary combo.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-onboarding-profile-loading-ux-so-the-user-always-sees-a-responsive-transition-after-login-while-the-app-fetches-the-user-profile-used-for-onboarding-routing-role-location-completion-add-clear-loading-messaging-english-and-avoid-blank-unclear-intermediate-states-during-the-first-post-login-profile-fetch",
+      "title": "Improve onboarding/profile-loading UX so the user always sees a responsive transition after login while the app fetches the user profile used for onboarding routing (role/location completion). Add clear loading messaging (English) and avoid blank/unclear intermediate states during the first post-login profile fetch.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-scope-onboarding-status-caching-correctly-to-the-authenticated-user-to-avoid-slow-or-incorrect-transitions-across-sessions-ensure-the-current-user-profile-query-is-keyed-by-the-authenticated-identity-principal-so-cached-data-does-not-cause-extra-refetch-loops-or-incorrect-routing-when-users-change",
+      "title": "Scope onboarding status caching correctly to the authenticated user to avoid slow or incorrect transitions across sessions. Ensure the \"current user profile\" query is keyed by the authenticated identity (principal) so cached data does not cause extra refetch loops or incorrect routing when users change.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-frontend-always-initializes-backend-access-control-before-any-authenticated-profile-queries-run-so-that-the-post-login-onboarding-guard-can-successfully-call-getcalleruserprofile-without-showing-the-error-screen-titled-unable-to-load-your-account",
+      "title": "Ensure the frontend always initializes backend access control before any authenticated/profile queries run so that the post-login onboarding guard can successfully call `getCallerUserProfile()` without showing the error screen titled \"Unable to load your account\".",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-actor-lifecycle-query-invalidation-behavior-so-that-creating-recreating-the-backend-actor-does-not-immediately-refetch-all-react-query-queries-avoiding-unnecessary-post-login-churn-and-reducing-chances-of-transient-profile-load-failures-that-surface-as-unable-to-load-your-account",
+      "title": "Update the actor lifecycle query invalidation behavior so that creating/recreating the backend actor does not immediately refetch all React Query queries, avoiding unnecessary post-login churn and reducing chances of transient profile-load failures that surface as \"Unable to load your account\".",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-login-page-so-the-email-password-input-fields-remain-interactive-type-tap-works-even-when-the-backend-actor-is-still-initializing-only-the-action-controls-that-require-the-backend-e-g-the-login-submit-button-should-be-disabled-until-the-system-is-ready",
+      "title": "Update the Login page so the email/password input fields remain interactive (type/tap works) even when the backend actor is still initializing; only the action controls that require the backend (e.g., the \"Login\" submit button) should be disabled until the system is ready.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-on-the-login-page-add-clear-english-user-facing-messaging-for-the-not-ready-state-that-explains-why-login-cannot-be-submitted-yet-e-g-initializing-system-login-will-be-available-shortly-without-blocking-interaction-with-the-input-fields",
+      "title": "On the Login page, add clear English user-facing messaging for the not-ready state that explains why login cannot be submitted yet (e.g., \"Initializing system…\" / \"Login will be available shortly\"), without blocking interaction with the input fields.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-backend-actor-initialization-to-be-resilient-to-transient-startup-network-failures-automatically-retry-initialization-instead-of-immediately-surfacing-the-error-text-failed-to-connect-to-the-backend-system-please-refresh-the-page-to-try-again-during-the-initial-load",
+      "title": "Update backend actor initialization to be resilient to transient startup/network failures: automatically retry initialization instead of immediately surfacing the error text \"Failed to connect to the backend system. Please refresh the page to try again.\" during the initial load.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-adjust-the-login-screen-messaging-and-submit-behavior-so-that-backend-not-ready-is-handled-as-a-non-destructive-readiness-state-not-a-login-error-and-does-not-instruct-users-to-refresh-the-page",
+      "title": "Adjust the Login screen messaging and submit behavior so that backend-not-ready is handled as a non-destructive readiness state (not a login error) and does not instruct users to refresh the page.",
+      "reqIds": [
+        "REQ-19"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-prevent-the-post-login-onboarding-guard-from-repeatedly-showing-the-destructive-error-screen-unable-to-load-your-account-for-transient-profile-load-failures-by-adding-automatic-retry-backoff-for-fetching-the-current-user-profile-and-only-surfacing-a-destructive-error-after-retries-are-exhausted",
+      "title": "Prevent the post-login onboarding guard from repeatedly showing the destructive error screen (\"Unable to load your account\") for transient profile-load failures by adding automatic retry/backoff for fetching the current user profile and only surfacing a destructive error after retries are exhausted.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-onboarding-status-query-behavior-so-that-it-is-resilient-and-does-not-immediately-fail-on-first-attempt-configure-react-query-retries-for-the-current-user-profile-query-and-ensure-error-messages-shown-to-users-are-generic-english-and-do-not-instruct-users-to-refresh-the-page",
+      "title": "Update the onboarding status query behavior so that it is resilient and does not immediately fail on first attempt: configure React Query retries for the current user profile query and ensure error messages shown to users are generic, English, and do not instruct users to refresh the page.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-backend-actor-initialization-access-control-initialization-state-does-not-trigger-repeated-onboarding-profile-errors-keep-the-onboarding-profile-queries-disabled-until-the-backend-actor-is-fully-ready-and-avoid-any-state-transitions-that-would-cause-repeated-error-retry-loops-during-actor-initialization",
+      "title": "Ensure the backend actor initialization / access-control initialization state does not trigger repeated onboarding/profile errors: keep the onboarding/profile queries disabled until the backend actor is fully ready, and avoid any state transitions that would cause repeated error->retry loops during actor initialization.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "App branding + welcome screen that displays \"welcome to helthcare reception.\" on launch",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Authentication: login with email + password",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Account creation form: name, email, phone number, gender, and suggested password; redirect to login after signup",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Post-login role selection screen with two options: red box \"search for reception job\" and blue box \"search for receptionist\" (shown once on first login)",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "First-time area/location form after role selection: city, district, state, country",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Job seeker flow (red): upload photo from gallery, submit application, and show confirmation message \"your application applied\"; store/send name, email, phone, gender, photo, and area",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Job seeker home page (red): option to change/update submitted information",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Recruiter flow (blue): after area info, show list of applicants (red users) in the same area",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Create backend data models and methods to support: user registration, login, onboarding status (role selected + area completed), saving/updating a job seeker application (including photo data), and querying job seeker applications by area for recruiters.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Reduce slow post-login loading by preventing unnecessary global React Query refetches triggered when the backend actor becomes available or changes (identity change). Specifically, do not force an immediate refetch of *all* queries after actor creation; instead, only invalidate relevant queries and let screens refetch on demand.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Prevent the \"Failed to connect to the backend system. Please refresh the page to try again.\" message from appearing during backend actor initialization; add resilient retry/ready-state handling instead of surfacing a connection error on the login screen",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Helthcare Reception",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}
